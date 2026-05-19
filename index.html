@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מונופול קיבוצי ישראל</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-slate-100 font-sans">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const BOARD_SPACES = Array.from({ length: 40 }, (_, i) => ({
+            id: i,
+            name: i === 0 ? "התחלה" : `קיבוץ ${i}`,
+            price: i % 10 !== 0 ? 100 + i * 5 : null,
+            color: i % 10 === 0 ? "bg-slate-300" : ["bg-red-400", "bg-blue-400", "bg-green-400", "bg-yellow-400"][i % 4]
+        }));
+
+        function App() {
+            const [stage, setStage] = useState('SETUP'); // SETUP, GAME
+            const [players, setPlayers] = useState([]);
+            const [setupCount, setSetupCount] = useState(2);
+            const [playerInputs, setPlayerInputs] = useState([{ name: '', color: '#ef4444' }, { name: '', color: '#3b82f6' }]);
+            
+            const handleSetup = () => {
+                const newPlayers = playerInputs.map((p, i) => ({
+                    id: i,
+                    name: p.name || `שחקן ${i + 1}`,
+                    color: p.color,
+                    position: 0,
+                    money: 1500
+                }));
+                setPlayers(newPlayers);
+                setStage('GAME');
+            };
+
+            const movePlayer = (playerId, targetPosition) => {
+                setPlayers(prev => prev.map(p => p.id === playerId ? { ...p, position: targetPosition } : p));
+            };
+
+            const onDrop = (e, posId) => {
+                const playerId = parseInt(e.dataTransfer.getData("playerId"));
+                movePlayer(playerId, posId);
+            };
+
+            if (stage === 'SETUP') {
+                return (
+                    <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4 text-white">
+                        <div className="bg-slate-800 p-8 rounded-3xl w-full max-w-lg shadow-2xl border border-slate-700">
+                            <h1 className="text-3xl font-black mb-6 text-emerald-400 text-center">הגדרת משחק</h1>
+                            <div className="space-y-4">
+                                {playerInputs.map((p, i) => (
+                                    <div key={i} className="flex gap-2 items-center">
+                                        <input 
+                                            className="bg-slate-700 p-2 rounded w-full border border-slate-600"
+                                            placeholder={`שם שחקן ${i + 1}`}
+                                            onChange={(e) => {
+                                                const newInputs = [...playerInputs];
+                                                newInputs[i].name = e.target.value;
+                                                setPlayerInputs(newInputs);
+                                            }}
+                                        />
+                                        <input type="color" value={p.color} onChange={(e) => {
+                                            const newInputs = [...playerInputs];
+                                            newInputs[i].color = e.target.value;
+                                            setPlayerInputs(newInputs);
+                                        }} className="w-10 h-10 rounded cursor-pointer" />
+                                    </div>
+                                ))}
+                                <button onClick={handleSetup} className="w-full bg-emerald-600 py-3 rounded-xl font-bold mt-4 hover:bg-emerald-500">התחל משחק</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="flex h-screen overflow-hidden" dir="rtl">
+                    <div className="w-64 bg-slate-800 text-white p-4 overflow-y-auto">
+                        <h2 className="font-bold text-xl mb-4 text-emerald-400">לוח שחקנים</h2>
+                        {players.map(p => (
+                            <div key={p.id} className="bg-slate-700 p-3 rounded-xl mb-2 flex items-center gap-3">
+                                <div className="w-4 h-4 rounded-full" style={{ backgroundColor: p.color }} />
+                                <div>
+                                    <div className="font-bold">{p.name}</div>
+                                    <div className="text-emerald-400 text-sm">₪{p.money}</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="flex-1 grid grid-cols-11 grid-rows-11 gap-1 p-2 bg-slate-200">
+                        {BOARD_SPACES.map((space, i) => (
+                            <div 
+                                key={i}
+                                onDragOver={(e) => e.preventDefault()}
+                                onDrop={(e) => onDrop(e, space.id)}
+                                onClick={() => movePlayer(0, space.id)}
+                                className="bg-white border-t-4 relative flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 transition-colors"
+                                style={{ borderColor: space.price ? '#94a3b8' : 'transparent' }}
+                            >
+                                <span className="text-[10px] text-slate-500 font-bold">{space.name}</span>
+                                <div className="absolute flex gap-1 bottom-1">
+                                    {players.filter(p => p.position === space.id).map(p => (
+                                        <div 
+                                            key={p.id} 
+                                            draggable 
+                                            onDragStart={(e) => e.dataTransfer.setData("playerId", p.id)}
+                                            className="w-4 h-4 rounded-full shadow-lg cursor-grab"
+                                            style={{ backgroundColor: p.color }}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
